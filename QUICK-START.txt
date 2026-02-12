@@ -1,0 +1,60 @@
+════════════════════════════════════════════════════
+🚀 快速开始 - 2 步完成部署
+════════════════════════════════════════════════════
+
+项目状态：✅ 已准备完毕
+
+────────────────────────────────────────────
+步骤 1: 推送到 GitHub（必需）
+────────────────────────────────────────────
+
+生成 GitHub Token:
+1. https://github.com/settings/tokens
+2. 创建 Token (classic)，勾选 repo 权限
+3. 复制 Token
+
+然后执行（在服务器或本地）：
+
+方式 A: 本地操作（推荐）
+   - 下载 crypto-dashboard.bundle
+   - 本地 git clone 和 push
+
+方式 B: 服务器执行
+   cd /root/.openclaw/workspace/crypto-dashboard
+   export GITHUB_TOKEN=your_token
+   export GITHUB_USERNAME=your_username
+   ./auto-exec.sh
+
+────────────────────────────────────────────
+步骤 2: 连接 Cloudflare Pages（浏览器）
+────────────────────────────────────────────
+
+1. https://dash.cloudflare.com/
+2. Workers & Pages → Create → Pages
+3. Connect to Git
+4. 选择 crypto-dashboard 仓库
+5. 配置：
+   - Build command: npm run build
+   - Output directory: dist
+6. Save and Deploy
+
+════════════════════════════════════════════════════
+📁 快速资源
+════════════════════════════════════════════════════
+
+项目: /root/.openclaw/workspace/crypto-dashboard/
+
+Bundle: crypto-dashboard.bundle (115 KB)
+下载: scp root@server-ip:.../crypto-dashboard.bundle ./
+
+快速指南: cat YOU-EXECUTE.md
+详细报告: cat EXECUTION-REPORT.txt
+
+════════════════════════════════════════════════════
+🌐 访问
+════════════════════════════════════════════════════
+
+本地: http://10.3.0.10:8080/dist/
+Cloudflare: https://crypto-dashboard.pages.dev
+
+════════════════════════════════════════════════════

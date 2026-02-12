@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>加密市场数字看板 - 原型设计</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/recharts/umd/Recharts.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body { background: #0f172a; color: #e2e8f0; }
+    .glass { background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(10px); }
+        .price-up { color: #10b981; }
+        .price-down { color: #ef4444; }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { LineChart, Line, AreaChart, Area, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, ReferenceLine } = Recharts;
+
+        // 模拟实时价格数据
+        const coins = [
+            { id: 'btc', name: 'Bitcoin', symbol: 'BTC', price: 67500, change: 2.3, sparkline: [67200, 67300, 67100, 67400, 67600, 67300, 67400, 67500] },
+            { id: 'eth', name: 'Ethereum', name: 'Ethereum', symbol: 'ETH', price: 3450, change: -1.2, sparkline: [3480, 3470, 3460, 3455, 3460, 3470, 3465, 3450] },
+            { id: 'sol', name: 'Solana', symbol: 'SOL', price: 142, change: 5.7, sparkline: [135, 138, 140, 141, 143, 142.5, 141, 142, 142] },
+            { id: 'ada', name: 'Cardano', symbol: 'ADA', price: 0.52, change: 3.8, sparkline: [0.50, 0.51, 0.515, 0.52, 0.525, 0.52, 0.51, 0.52] },
+            { id: 'avax', name: 'Avalanche', symbol: 'AVAX', price: 34.2, change: -0.8, sparkline: [34.5, 34.4, 34.3, 34.25, 34.3, 34.35, 34.3, 34.2] },
+        ];
+
+        // 模拟24小时价格数据
+        const generateHistoryData = (basePrice, points = 24) => {
+            const data = [];
+            let price = basePrice;
+            for (let i = 0; i < points; i++) {
+                price = price * (1 + (Math.random() - 0.5) * 0.05); // ±2.5% 波动
+                data.push({ time: `${i}:00`, value: Math.round(price * 100) / 100 });
+            }
+            return data;
+        };
+
+        // 模拟投资组合
+        const portfolio = [
+            { coin: 'BTC', amount: 0.05, value: 67500, avgPrice: 65000 },
+            { coin: 'ETH', amount: 2.3, value: 3450, avgPrice: 3380 },
+            { coin: 'SOL', amount: 45, value: 142, avgPrice: 134 },
+            { coin: 'ADA', value: 0.52, avgPrice: 0.50, amount: 1000 },
+            { coin: 'AVAX', value: 34.2, avgPrice: 33.5, amount: 8 },
+        ].map(c => ({
+            ...c,
+            currentValue: c.value,
+            avgPrice: c.avgPrice,
+            profit: ((c.value - c.avgPrice) / c.avgPrice * 100).toFixed(2),
+            amount: c.amount
+        }));
+
+        function App() {
+            const [selectedCoin, setSelectedCoin] = useState('btc');
+            const [isRealtime, setIsRealtime] = useState(true);
+            const [lastUpdate, setLastUpdate] = useState(new Date().toLocaleTimeString());
+
+            // 模拟实时更新
+            useEffect(() => {
+                if (!isRealtime) return;
+                const interval = setInterval(() => {
+                    coins.forEach(coin => {
+                        const change = (Math.random() - 0.5) * 2;
+                        coin.price = Math.round(coin.price * (1 + change / 100));
+                        coin.change = change.toFixed(1);
+                    });
+                    setLastUpdate(new Date().toLocaleTimeString());
+                }, 3000);
+                return () => clearInterval(interval);
+            }, [isRealtime]);
+
+            const handleCoinSelect = (coinId) => setSelectedCoin(coinId);
+            const toggleRealtime = () => setIsRealtime(!isRealtime);
+
+            return (
+                <div className="max-w-7xl mx-auto">
+                    {/* Header */}
+                    <header className="glass rounded-2xl p-6 mb-6">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+                                    加密市场数字看板
+                                </h1>
+                                <p className="text-gray-400 mt-1">
+                                    实时追踪主流加密货币价格与市场动态
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="text-sm text-gray-400">
+                                    最后更新: {lastUpdate}
+                                </div>
+                                <button
+                                    onClick={toggleRealtime}
+                                    className={`px-4 py-2 rounded-lg font-medium ${isRealtime ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-600 hover:bg-gray-700'}`}
+                                >
+                                    {isRealtime ? '实时更新: 开' : '实时更新: 关'}
+                                </button>
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* 价格概览卡片 */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                        {coins.map(coin => (
+                            <div
+                                key={coin.id}
+                                onClick={() => handleCoinSelect(coin.id)}
+                                className={`glass rounded-2xl p-5 cursor-pointer transition-all hover:bg-slate-800 ${selectedCoin === coin.id ? 'ring-2 ring-blue-500' : ''}`}
+                            >
+                                <div className="flex justify-between items-start mb-3">
+                                    <div>
+                                        <h3 className="text-lg font-bold text-white">{coin.name}</h3>
+                                        <span className="text-gray-400 text-sm">{coin.symbol}</span>
+                                    </div>
+                                    <span className={`text-sm font-bold ${coin.change >= 0 ? 'price-up' : 'price-down'}`}>
+                                        {coin.change >= 0 ? '+' : ''}{parseFloat(coin.change).toFixed(2)}%
+                                    </span>
+                                </div>
+                                <div className="text-3xl font-bold text-white mb-2">
+                                    ${coin.price.toLocaleString()}
+                                </div>
+                                <div className="h-16">
+                                    <ResponsiveContainer width="100%" height={64}>
+                                        <AreaChart data={coin.sparkline.map((price, i) => ({ time: i, value: price }))}>
+                                            <XAxis dataKey="time" hide />
+                                            <YAxis hide />
+                                            <Tooltip />
+                                            <Area type="monotone" dataKey="value" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* 选中的币种详情 */}
+                    <div className="glass rounded-2xl p-6 mb-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-xl font-bold">{coins.find(c => c.id === selectedCoin)?.name} 价格走势</h2>
+                            <div className="flex gap-2">
+                                <button className="px-3 py-1 bg-slate-700 rounded-lg text-sm hover:bg-slate-600">1H</button>
+                                <button className="px-3 py-1 bg-blue-600 rounded-lg text-sm hover:bg-blue-700">1D</button>
+                                <button className="png-3 py-1 bg-purple-600 rounded-lg text-sm hover:bg-purple-700">1W</button>
+                            </div>
+                        </div>
+                        <ResponsiveContainer width="100%" height={400}>
+                            <AreaChart data={generateHistoryData(coins.find(c => c.id === selectedCoin)?.price || 67500)}>
+                                <XAxis dataKey="time" stroke="#94a3b8" />
+                                <YAxis />
+                                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                                <Tooltip />
+                                <Area type="monotone" dataKey="value" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
+
+                    {/* 投资组合 */}
+                    <div className="glass rounded-2xl p-6">
+                        <h2 className="text-xl font-bold mb-4">投资组合</h2>
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="text-left text-gray-400 border-b border-gray-700">
+                                        <th className="pb-3 pr-4">币种</th>
+                                        <th className="pb-3 pr-4">持有数量</th>
+                                        <th className="pb-3 pr-4">当前价值</th>
+                                        <th>盈亏(%)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {portfolio.map((item, index) => (
+                                        <tr key={index} className="border-b border-gray-700 last:border-0">
+                                            <td className="py-3 pr-4 font-medium">{item.coin}</td>
+                                            <td className="py-3 pr-4">{item.amount}</td>
+                                            <td className="py-3 pr-4">${item.currentValue.toLocaleString()}</td>
+                                            <td className={`py-3 pr-4 font-bold ${parseFloat(item.profit) >= 0 ? 'price-up' : 'price-down'}`}>
+                                                {parseFloat(item.profit) >= 0 ? '+' : ''}{item.profit}%
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="mt-4 p-4 bg-slate-800/50 rounded-xl">
+                            <div className="flex justify-between items-center">
+                                <span>总价值: </span>
+                                <span className="text-2xl font-bold text-green-400">$45,234.50</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 市场热力 */}
+                    <div className="glass rounded-2xl p-6">
+                        <h2 className="text-xl font-bold mb-4">市场热力趋势</h2>
+                        <div className="h-64">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={[
+                                    { name: 'BTC', value: 95 },
+                                    { name: 'ETH', value: 88 },
+                                    { name: 'SOL', value: 92 },
+                                    { name: 'ADA', value: 75 },
+                                    { name: 'AVAX', value: 68 },
+                                ]}>
+                                    <XAxis dataKey="name" stroke="#94a3b8" />
+                                    <YAxis />
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                                    <Tooltip />
+                                    <Bar dataKey="value" fill="#8b5cf6" radius={[8, 4, 2, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+
+                    {/* 底部状态 */}
+                    <footer className="mt-6 text-center text-gray-400 text-sm">
+                        <p>数据来源: CoinGecko API & CoinMarketCap API | Cloudflare Pages 部署</p>
+                        <p>技术栈: React | Vite | Recharts | TailwindCSS</p>
+                    </footer>
+                </div>
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
